@@ -1,7 +1,7 @@
 'use strict';
 
 import { Message } from '../../Core/Messages';
-import * as Merge from 'merge';
+import { merge } from '../../Core/Utils';
 
 export default class MessageBuilder
 {
@@ -10,19 +10,19 @@ export default class MessageBuilder
   protected _message: Message = null;
   protected _attributes: object = {};
 
-  message(message: Message): MessageBuilder
+  message(message: Message): this
   {
     this._message = message;
     return this;
   }
 
-  to(to: object): MessageBuilder
+  to(to: object): this
   {
     this._to = to;
     return this;
   }
 
-  toTag(tagId: number): MessageBuilder
+  toTag(tagId: number): this
   {
     this.to({
       filter: {
@@ -33,7 +33,7 @@ export default class MessageBuilder
     return this;
   }
 
-  toUsers(openids: Array<string>): MessageBuilder
+  toUsers(openids: Array<string>): this
   {
     this.to({
       touser: openids
@@ -41,7 +41,7 @@ export default class MessageBuilder
     return this;
   }
 
-  toAll(): MessageBuilder
+  toAll(): this
   {
     this.to({
       filter: {
@@ -51,7 +51,7 @@ export default class MessageBuilder
     return this;
   }
 
-  with(attributes: object): MessageBuilder
+  with(attributes: object): this
   {
     this._attributes = attributes;
     return this;
@@ -69,7 +69,7 @@ export default class MessageBuilder
       prepends = this._to;
     }
 
-    let message = Merge(prepends, content, this._attributes);
+    let message = merge(merge(merge({}, prepends), content), this._attributes);
 
     return message;
   }

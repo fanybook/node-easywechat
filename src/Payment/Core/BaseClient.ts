@@ -2,11 +2,10 @@
 
 import BaseApplication from '../../Core/BaseApplication';
 import HttpMixin from '../../Core/Mixins/HttpMixin';
-import { applyMixins, randomString, makeSignature, singleItem } from '../../Core/Utils';
-import * as Merge from 'merge';
-import * as Xml2js from 'xml2js';
-import * as Fs from 'fs';
-import * as RawBody from 'raw-body';
+import { merge, applyMixins, randomString, makeSignature, singleItem } from '../../Core/Utils';
+import Xml2js from 'xml2js';
+import Fs from 'fs';
+import RawBody from 'raw-body';
 import Response from '../../Core/Http/Response';
 
 class BaseClient implements HttpMixin
@@ -28,19 +27,19 @@ class BaseClient implements HttpMixin
   protected request(endpoint: string, params: object = {}, method: string = 'post', options: object = {}, returnResponse: boolean = false): Promise<any>
   {
     let base = {
-      mch_id: this.app['config']['mch_id'],
+      mch_id: this.app.config.mch_id,
       nonce_str: randomString(32),
     };
 
-    if (this.app['config']['sub_mch_id']) {
+    if (this.app.config.sub_mch_id) {
       base['sub_mch_id'] = '';
     }
-    if (this.app['config']['sub_appid']) {
+    if (this.app.config.sub_appid) {
       base['sub_appid'] = '';
     }
 
-    let localParams = Merge(base, this.prepends(), params);
-    localParams['sign_type'] = localParams['sign_type'] || 'md5';
+    let localParams = merge(merge(base, this.prepends()), params);
+    localParams['sign_type'] = localParams['sign_type'] || 'MD5';
 
     let secretKey = this.app['getKey'](endpoint);
     localParams['sign'] = makeSignature(localParams, secretKey, localParams['sign_type']);
@@ -53,7 +52,7 @@ class BaseClient implements HttpMixin
         newline: '',
       }
     });
-    let payload = Merge(options, {
+    let payload = merge(merge({}, options), {
       url: endpoint,
       method,
       body: XmlBuilder.buildObject(localParams)
@@ -81,10 +80,10 @@ class BaseClient implements HttpMixin
 
   protected safeRequest(endpoint: string, params: object = {}, method: string = 'post', options: object = {}): Promise<any>
   {
-    options = Merge(options, {
+    options = merge(merge({}, options), {
       agentOptions: {
-        pfx: Fs.readFileSync(this.app['config']['cert_path']),
-        passphrase: this.app['config']['mch_id'],
+        pfx: Fs.readFileSync(this.app.config.cert_path),
+        passphrase: this.app.config.mch_id,
       }
     });
     return this.request(endpoint, params, method, options);
@@ -121,7 +120,7 @@ class BaseClient implements HttpMixin
 
   getClientIp()
   {
-    return this.app['request'].getClientIp();
+    return this.app.request.getClientIp();
   }
 
 

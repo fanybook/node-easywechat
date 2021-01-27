@@ -1,8 +1,8 @@
 'use strict';
 
-import * as Merge from 'merge';
-import * as Request from 'request';
+import Request from 'request';
 import BaseApplicatioin from '../BaseApplication';
+import { merge } from '../Utils';
 
 export default class HttpMixin
 {
@@ -13,13 +13,20 @@ export default class HttpMixin
     if (typeof payload['baseUrl'] == 'undefined' && this['baseUrl']) {
       payload['baseUrl'] = this['baseUrl'];
     }
-    if (this['app'] && this['app'] instanceof BaseApplicatioin) {
-      payload = Merge({}, this['app']['config']['http'] || {}, payload);
+    if (payload['url'].substr(0, 7) == 'http://' || payload['url'].substr(0, 8) == 'https://') {
+      delete payload['baseUrl'];
     }
-    this['app']['log']('request', payload);
+    if (typeof payload['method'] == 'undefined') {
+      payload['method'] = 'post';
+    }
+    let method = payload['method'].toLowerCase();
+    if (this['app'] && this['app'] instanceof BaseApplicatioin) {
+      payload = merge(merge({}, this['app'].config.http || {}), payload);
+    }
+    this['app']['log']('debug', 'doRequest', payload);
     return new Promise(
       (resolve, reject) => {
-        Request(
+        Request[method](
           payload,
           function (error, response, body) {
             if (error) {

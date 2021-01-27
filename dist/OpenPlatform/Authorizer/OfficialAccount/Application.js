@@ -1,15 +1,22 @@
 'use strict';
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-const Application_1 = require("../../../OfficialAccount/Application");
-class Application extends Application_1.default {
+const Application_1 = __importDefault(require("../../../OfficialAccount/Application"));
+const MiniProgramClient_1 = __importDefault(require("./MiniProgram/MiniProgramClient"));
+class OfficialAccount extends Application_1.default {
     constructor(config = {}, prepends = {}, id = null) {
         super(config, prepends, id);
-        let providers = [
-            'OpenPlatform/Authorizer/Aggregate',
-            'OpenPlatform/Authorizer/OfficialAccount/MiniProgram',
-        ];
-        super.registerProviders(providers);
+        this.mini_program = null;
+        this.registerProviders();
+    }
+    registerProviders() {
+        this.registerCommonProviders();
+        this.offsetSet('mini_program', function (app) {
+            return new MiniProgramClient_1.default(app);
+        });
     }
 }
-exports.default = Application;
+exports.default = OfficialAccount;
 ;

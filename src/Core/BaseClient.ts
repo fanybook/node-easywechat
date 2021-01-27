@@ -3,12 +3,11 @@
 import BaseAccessToken from './BaseAccessToken';
 import BaseApplication from './BaseApplication';
 import HttpMixin from './Mixins/HttpMixin';
-import { applyMixins, isString } from './Utils';
-import * as Fs from 'fs';
-import * as Merge from 'merge';
+import { merge, applyMixins, isString } from './Utils';
+import Fs from 'fs';
 import Response from './Http/Response';
 
-class BaseClient implements HttpMixin
+abstract class BaseClient implements HttpMixin
 {
   protected accessToken: BaseAccessToken = null;
   protected app: BaseApplication = null;
@@ -16,10 +15,10 @@ class BaseClient implements HttpMixin
   constructor(app: BaseApplication, accessToken: BaseAccessToken = null)
   {
     this.app = app;
-    this.accessToken = accessToken || this.app['access_token'];
+    this.accessToken = accessToken || this.app.access_token;
   }
 
-  setAccessToken(accessToken): BaseClient
+  setAccessToken(accessToken: BaseAccessToken): this
   {
     this.accessToken = accessToken;
 
@@ -58,7 +57,7 @@ class BaseClient implements HttpMixin
       }
     }
 
-    formData = Merge(formData, form);
+    formData = merge(formData, form);
 
     return this.request({
       url,

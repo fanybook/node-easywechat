@@ -12,7 +12,7 @@ export default class VerifyTicket
     this.app = app;
   }
 
-  async setTicket(ticket: string): Promise<VerifyTicket>
+  async setTicket(ticket: string): Promise<this>
   {
     let cacher = this.app.getCache();
 
@@ -38,6 +38,6 @@ export default class VerifyTicket
 
   protected getCacheKey(): string
   {
-    return 'easywechat.open_platform.verify_ticket.' + this.app['config']['app_id'];
+    return 'easywechat.open_platform.verify_ticket.' + this.app.config.app_id;
   }
 }

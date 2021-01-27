@@ -1,18 +1,41 @@
 'use strict';
 
-import * as Path from 'path';
-import * as Merge from 'merge';
+import CacheInterface from './Contracts/CacheInterface';
 import FileCache from './Cache/FileCache';
-import { createHash, isObject, isFunction } from './Utils';
+import { merge, createHash, isObject, isFunction } from './Utils';
+import Request from './Http/Request';
+import { EasyWechatConfig } from './Types';
+import BaseAccessToken from './BaseAccessToken';
 
-export default class BaseApplicatioin
+export default abstract class BaseApplicatioin
 {
-  protected defaultConfig: Object = {};
-  protected userConfig: Object = {};
-  protected cache: Object = null;
+  protected defaultConfig: EasyWechatConfig = {};
+  protected userConfig: EasyWechatConfig = {};
   protected id: String = null;
 
-  constructor(config: Object = {}, prepends: Object = {}, id: String = null)
+  /**
+   * 缓存实例
+   */
+  public cache: CacheInterface = null;
+  /**
+   * 配置项
+   */
+  public config: EasyWechatConfig = {};
+  /**
+   * 日志方法
+   */
+  public log: Function = null;
+  /**
+   * 请求实例
+   */
+  public request: Request = null;
+
+  /**
+   * 请求token
+   */
+  public access_token: BaseAccessToken = null;
+
+  constructor(config: EasyWechatConfig, prepends: Object = {}, id: String = null)
   {
     if (new.target === BaseApplicatioin) {
       throw new Error('Can not create instance via BaseApplicatioin.');
@@ -34,9 +57,12 @@ export default class BaseApplicatioin
     return this.id;
   }
 
-  getConfig(): Object
+  /**
+   * 获取合并后的配置
+   */
+  getConfig(): EasyWechatConfig
   {
-    let base = {
+    let base: EasyWechatConfig = {
       // https://www.npmjs.com/package/request#requestoptions-callback
       http: {
         timeout: 30000,
@@ -44,52 +70,55 @@ export default class BaseApplicatioin
       },
     };
 
-    return Merge(base, this.defaultConfig, this.userConfig);
+    return merge(merge(base, this.defaultConfig), this.userConfig);
   }
 
-  registerProviders(providers: Array<string> = []): void
+  /**
+   * 注册通用模块
+   */
+  registerCommonProviders(): void
   {
-    [
-      'Providers/ConfigServiceProvider',
-      'Providers/LogServiceProvider',
-      'Providers/RequestServiceProvider',
-    ].forEach(
-      provider => {
-        try {
-          let serviceClass = require(Path.resolve(__dirname + '/' + provider))['default'];
-          serviceClass.register(this);
-        }
-        catch (e) {
-          throw new Error(`Fail to regist service '${provider}', erro: ${e.message}`);
-        }
-      }
-    );
+    this.offsetSet('config', function (app) {
+      return app.getConfig();
+    });
 
-    providers.forEach(
-      provider => {
-        try {
-          let serviceClass = require(Path.resolve(__dirname + '/../' + provider + '/ServiceProvider'))['default'];
-          serviceClass.register(this);
-        }
-        catch (e) {
-          throw new Error(`Fail to regist service '${provider}', erro: ${e.message}`);
-        }
-      }
-    );
+    this.log = function () {
+      let args = arguments;
+      args[0] = 'NodeEasywechat2: ' + args[0];
+      return console.log.apply(null, arguments);
+    };
 
+    if (!this.request) {
+      this.request = new Request;
+    }
   }
 
+  /**
+   * 自定义服务模块（重新绑定）
+   * @param id 服务模块的id，如：cache、request、access_token
+   * @param value 自定义服务模块的实例，可以传入一个闭包，闭包会接收一个指向Application的参数
+   */
   rebind(id: string, value: any): void
   {
     this.offsetUnset(id);
     this.offsetSet(id, value);
   }
 
+  /**
+   * 解绑自定义服务模块
+   * @param id 服务模块的id，如：cache、request、access_token
+   * @param value 自定义服务模块的实例
+   */
   offsetUnset(id: string): void
   {
     delete this[id];
   }
 
+  /**
+   * 绑定自定义服务模块
+   * @param id 服务模块的id，如：cache、request、access_token
+   * @param value 自定义服务模块的实例，可以传入一个闭包，闭包会接收一个指向Application的参数
+   */
   offsetSet(id: string, value: any): void
   {
     if (isFunction(value)) {
@@ -98,7 +127,10 @@ export default class BaseApplicatioin
     this[id] = value;
   }
 
-  getCache(): any
+  /**
+   * 获取cache实例
+   */
+  getCache(): CacheInterface
   {
     if (this.cache) {
       return this.cache;
@@ -107,9 +139,12 @@ export default class BaseApplicatioin
     return this.cache = this.createDefaultCache();
   }
 
+  /**
+   * 生成默认的缓存实例（文件缓存）
+   */
   createDefaultCache(): FileCache
   {
-    return new FileCache(this['config']['file_cache'] || {});
+    return new FileCache(this.config.file_cache || null);
   }
 
 };

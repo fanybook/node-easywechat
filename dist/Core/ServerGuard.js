@@ -8,13 +8,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-const Response_1 = require("./Http/Response");
+const Response_1 = __importDefault(require("./Http/Response"));
 const Messages_1 = require("./Messages");
 const Utils_1 = require("./Utils");
-const Xml2js = require("xml2js");
-const FinallResult_1 = require("./Decorators/FinallResult");
-const TerminateResult_1 = require("./Decorators/TerminateResult");
+const xml2js_1 = __importDefault(require("xml2js"));
+const FinallResult_1 = __importDefault(require("./Decorators/FinallResult"));
+const TerminateResult_1 = __importDefault(require("./Decorators/TerminateResult"));
 class ServerGuard {
     constructor(app) {
         this.app = null;
@@ -22,12 +25,27 @@ class ServerGuard {
         this.handlers = {};
         this.app = app;
     }
+    /**
+     * 注册消息处理器
+     * @param condition EasyWechat.Messages.Message.xxx，用于处理特定消息类型，默认：* 表示全部
+     * @param handler 处理函数，该函数需要接收一个消息对象
+     */
     on(condition, handler) {
         this.push(handler, condition);
     }
+    /**
+     * 注册消息处理器
+     * @param condition EasyWechat.Messages.Message.xxx，用于处理特定消息类型，默认：* 表示全部
+     * @param handler 处理函数，该函数需要接收一个消息对象
+     */
     observe(condition, handler) {
         this.push(handler, condition);
     }
+    /**
+     * 注册消息处理器
+     * @param handler 处理函数，该函数需要接收一个消息对象
+     * @param condition EasyWechat.Messages.Message.xxx，用于处理特定消息类型，默认：* 表示全部
+     */
     push(handler, condition = '*') {
         if (!this.handlers[condition]) {
             this.handlers[condition] = [];
@@ -82,6 +100,9 @@ class ServerGuard {
             return false;
         });
     }
+    /**
+     * 处理消息
+     */
     serve() {
         return __awaiter(this, void 0, void 0, function* () {
             let content = yield this.app['request'].getContent();
@@ -153,7 +174,7 @@ class ServerGuard {
                 message = new Messages_1.News([message]);
             }
             if (!(message instanceof Messages_1.Message)) {
-                throw new Error(`Invalid Messages type "%s".`);
+                throw new Error('The message object should be instance of EasyWechat.Messages.*');
             }
             return yield this.buildReply(to, from, message);
         });
@@ -169,7 +190,7 @@ class ServerGuard {
             let res = message.transformToXml(prepends);
             if (yield this.isSafeMode()) {
                 this.app['log']('Messages safe mode is enabled.');
-                let XmlBuilder = new Xml2js.Builder({
+                let XmlBuilder = new xml2js_1.default.Builder({
                     cdata: true,
                     renderOpts: {
                         pretty: false,
@@ -183,7 +204,7 @@ class ServerGuard {
         });
     }
     getToken() {
-        return this.app['config']['token'];
+        return this.app.config.token;
     }
     isSafeMode() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -207,6 +228,9 @@ class ServerGuard {
             };
         });
     }
+    /**
+     * 获取消息
+     */
     getMessage() {
         return __awaiter(this, void 0, void 0, function* () {
             let content = yield this.app['request'].getContent();
@@ -247,7 +271,7 @@ class ServerGuard {
     }
     parseXmlMessage(xml) {
         return new Promise((resolve, reject) => {
-            Xml2js.parseString(xml, (err, result) => {
+            xml2js_1.default.parseString(xml, (err, result) => {
                 if (err) {
                     reject(err);
                 }

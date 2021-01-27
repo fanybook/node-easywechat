@@ -1,9 +1,8 @@
 'use strict';
 
 import BaseApplicatioin from "../../Core/BaseApplication";
-import * as Merge from 'merge';
-import * as Xml2js from 'xml2js';
-import { makeSignature, AesDecrypt, createHash, singleItem } from "../../Core/Utils";
+import Xml2js from 'xml2js';
+import { makeSignature, AesDecrypt, createHash, singleItem, merge } from "../../Core/Utils";
 import Response from "../../Core/Http/Response";
 
 export default class Handler
@@ -35,12 +34,16 @@ export default class Handler
     return null;
   }
 
+  /**
+   * 设置处理失败时的错误消息
+   * @param message 错误消息
+   */
   setFail(message: string): void
   {
     this.fail = message;
   }
 
-  respondWith(attributes: object, sign: Boolean = false): Handler
+  respondWith(attributes: object, sign: Boolean = false): this
   {
     this.attributes = attributes;
     this.sign = sign;
@@ -55,7 +58,7 @@ export default class Handler
       return_msg: this.fail
     };
 
-    let attributes = Merge(base, this.attributes);
+    let attributes = merge(base, this.attributes);
 
     if (this.sign) {
       attributes['sign'] = makeSignature(attributes, this.app['getKey']())
@@ -112,7 +115,7 @@ export default class Handler
 
     let buffer = Buffer.from(message[key], 'base64');
 
-    return AesDecrypt(buffer.toString(), createHash(this.app['config'].key, 'md5'), '', 'AES-256-ECB');
+    return AesDecrypt(buffer.toString(), createHash(this.app.config.key, 'md5'), '', 'AES-256-ECB');
   }
 
   protected validate(message: object): void
