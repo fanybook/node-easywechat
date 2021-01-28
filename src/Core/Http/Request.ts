@@ -3,17 +3,18 @@
 import Url from 'url';
 import { IncomingMessage } from 'http';
 import RequestInterface from '../Contracts/RequestInterface';
-import { isIp, parseQueryString, isObject, isString } from '../Utils';
+import { isIp, parseQueryString, isObject, isString, singleItem } from '../Utils';
 import RawBody from 'raw-body';
+import Xml2js from 'xml2js';
 
 export default class Request implements RequestInterface
 {
   protected _req: IncomingMessage = null;
   protected _uri: string = '';
   protected _method: string = '';
-  protected _headers: object = {};
-  protected _get: object = {};
-  protected _post: object = {};
+  protected _headers: object = null;
+  protected _get: object = null;
+  protected _post: object = null;
   protected _content: Buffer = null;
   protected _contentType: string = '';
   protected _ip: string = '';
@@ -29,24 +30,39 @@ export default class Request implements RequestInterface
       this._headers = req.headers || {};
       this._contentType = this._headers['content-type'] || '';
 
-      if (Buffer.isBuffer(content)) {
-        this._content = content;
-      }
-      else if (isObject(content)) {
-        this._post = <object> content;
-        this._content = Buffer.from(JSON.stringify(content));
-      }
-      else if (isString(content)) {
-        try {
-          this._post = JSON.parse(<string> content);
+      if (content) {
+        if (Buffer.isBuffer(content)) {
+          this._content = content;
         }
-        catch (e) {
-          this._post = parseQueryString(<string> content);
+        else if (isObject(content)) {
+          this._post = <object> content;
+          this._content = Buffer.from(JSON.stringify(content));
+          this._contentType = 'application/json';
         }
-        this._content = Buffer.from(content);
+        else if (isString(content)) {
+          try {
+            this._post = JSON.parse(<string> content);
+            this._contentType = 'application/json';
+          }
+          catch (e) {
+            if ((<string> content).substr(0,1) === '<') {
+              Xml2js.parseString(content, (err, res) => {
+                res = singleItem(res);
+                if (res['xml']) res = res['xml'];
+                this._post = res;
+                this._contentType = 'text/xml';
+              });
+            }
+            else {
+              this._post = parseQueryString(<string> content);
+              this._contentType = 'application/x-www-form-urlencoded';
+            }
+          }
+          this._content = Buffer.from(content);
+        }
       }
 
-      this._get = Url.parse(req.url, true).query;
+      this._get = Url.parse(req.url, true).query || {};
 
       // 提取请求ip
       if (isIp(this._headers['x-client-ip'])) {
@@ -127,6 +143,18 @@ export default class Request implements RequestInterface
 
     }
     return this._post && this._post[key] ? this._post[key] : null;
+  }
+
+  getAllGet(): object
+  {
+    if (!this.isValid) throw new Error('Please set request first. app.rebind(\'request\', new EasyWechat.Request(ctx.req));');
+    return this._get;
+  }
+
+  getAllPost(): object
+  {
+    if (!this.isValid) throw new Error('Please set request first. app.rebind(\'request\', new EasyWechat.Request(ctx.req));');
+    return this._post;
   }
 
   async getContent(): Promise<Buffer>
